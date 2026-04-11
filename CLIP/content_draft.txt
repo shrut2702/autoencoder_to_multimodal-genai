@@ -1,0 +1,55 @@
+- why clip was needed?
+--> because earlier sota computer vision systems were trained on fized specific sets of classes, this restricted model's generalizability. And to make model capable on other tasks or identifying other classes, it needed to be trained on additional labeled data.
+--> aligning image and text to enable zero-shot transfer learning
+--> problem was: no ture semantic or language level understanding, model learnt image representations but specific to class ID
+
+- intuition:
+--> a model with generalized capabilites that can perform well on tasks and visual concepts (outside the dataset) without additional fine-tuning, enabling zero-shot transfer learning of the model to downstream tasks.
+
+-- issue with task-specific model is not just the output head with limited classes (which restricts generalization over other classes) but also this task-specific model's image representation aren't transferrable to other tasks.
+-- and clip improves the image representation by aligning it with text, making its image encoder suitable for other tasks with transfer learning.
+-- Learning image representations under the natural language supervision makes the representations generalizable over other tasks and well-versed with language understanding.
+
+To understand CLIP, I implemented it from scratch with ViT as image encoder and transformer as text encoder.
+
+I used Flicker8k dataset for pretraining and trained with the goal to pull the matching image and text embeddings together and push the embeddings away that are not pairs. This training objective was optimized by InfoNCELoss. 
+
+Along with from scratch implementation, I also experimented with pretrained image and text encoders, where the image encoders that were included are: ResNet18 (pretrained on ImageNet) and ViT-B16 (pretrained on ImageNet) both from torchvision, and text encoder used was BERT (bert-base-uncased) from HuggingFace Transformers.
+
+
+##########
+The motivation behind CLIP was to learn image representations under natural language supervision to make computer vision systems or models or encoders more generalizable and enable zero-shot transfer learning.
+###############
+
+Experiments:
+- Pretrained
+-- ResNet18 + BERT
+--- learnable temperature 
+-- ViT-B16 + BERT 
+--- learnable temperature
+--- fixed temperature = 0.07
+--- fixed temperature = 0.1
+--- fixed temperature = 0.5
+
+- from scratch
+-- ViT-B16 + Decoder-only Transformer
+--- learnable temperature
+
+- across all experiments:
+-- epochs: 10
+-- optimizer: Adam
+-- lr = 1e-4
+-- batch size: 100
+-- dataset: flicker8k (normalized images)
+-- resized to 224 x 224
+
+for experiments with pretrained encoders, both the image and text encoder weights were kept frozen and learning only projection layers for projecting modality representations to same embedding space.
+
+The objectives of this implementation:
+- Implement ViT from scratch
+- Learn the architecture and learning objective of CLIP
+- Observe the impact of temperature scaling on training
+
+Temperature Scaling Observations:
+- Lower temperature makes the distribution uniform and thus the loss is more forgiving.
+- With the increase in the temperature values, the loss converged faster and the model also resulted in higher R@1 scores.
