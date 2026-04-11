@@ -91,9 +91,9 @@ The decoder predicts per-pixel mean conditioned on $z$, but uses a **single glob
 
 ### Experiment 4 — CIFAR-10 + Multi-sample Gaussian Decoder
 
-Global variance decoder with multiple latent samples $z_1, ..., z_n \sim q(z|x)$ to form a Monte Carlo estimate of $\mathbb{E}_{q(z|x)}[\log p(x|z)]$.
+Global variance decoder with multiple latent samples $z_1, ..., z_n \sim q(z|x)$.
 
-**Observation:** Loss converges (~2600) then stagnates. Reconstructions are **extremely noisy**. KL divergence starts high and fluctuates significantly. The latent space is approximately Gaussian (mean $\approx 0$, variance $\approx 1$) but shows **no clear clustering** across classes in t-SNE. Although the latent distribution matches the prior, the encoder fails to learn informative representations — likely due to using an MLP encoder for high-dimensional structured data. CIFAR-10's high intra-class variability (background, color, texture) makes compression with a simple MLP impractical.
+**Observation:** Loss converges (~1800) then stagnates. Reconstructions are **slightly visible but very noisy**. KL divergence starts high and smoothly increases 220 and stagnates. The latent space is approximately Gaussian (mean $\approx 0$, variance $\approx 1$) but shows **no clear clustering** across classes in t-SNE. Although the latent distribution matches the prior, the encoder fails to learn informative representations — likely due to using an MLP encoder for high-dimensional structured data. CIFAR-10's high intra-class variability (background, color, texture) makes compression with a simple MLP less expressive.
 
 <details>
 <summary>Results (CIFAR-10)</summary>
@@ -135,9 +135,9 @@ Decoder outputs Bernoulli probabilities. Reconstruction uses the **mean (probabi
 
 ### Experiment 6 — CIFAR-10 + Multi-sample Bernoulli Decoder
 
-Same multi-sample Monte Carlo approach as the Gaussian CIFAR-10 experiment, but with Bernoulli likelihood.
+Same multi-sample approach as the Gaussian CIFAR-10 experiment, but with Bernoulli likelihood.
 
-**Observation:** Training is **stable**. KL divergence remains controlled. Reconstructions are **better and less noisy than the Gaussian decoder**, though still blurry. Loss stagnates (~1850). The latent space is approximately Gaussian (mean $\approx 0$, variance $\approx 1$) but shows no class-wise clustering in t-SNE. The same fundamental limitation persists: the MLP encoder struggles with the complex image distribution. High intra-class variability prevents meaningful latent clustering.
+**Observation:** Training is **stable**. KL divergence increases within a reasonable range and stabilizes. Reconstructions are **blurry and not noisy but lack detail and is less visible**. Loss stagnates (~1850). The latent space is approximately Gaussian (mean $\approx 0$, variance $\approx 1$) but shows no class-wise clustering in t-SNE. Hypothesis: the same fundamental limitation persists, the MLP encoder struggles with the complex image distribution and high intra-class variability prevents meaningful latent clustering.
 
 <details>
 <summary>Results (CIFAR-10)</summary>
@@ -154,6 +154,27 @@ Same multi-sample Monte Carlo approach as the Gaussian CIFAR-10 experiment, but 
 
 ---
 
+### Experiment 7 - CIFAR 10 + CNN Encoder + Multi-sample Bernoulli Decoder
+
+Same experiment as experiment 6 (multi-sample Bernoulli decoder) but with CNN encoder instead of MLP encoder to see if it improves the reconstruction quality and latent structure through better spatial feature extraction.
+
+**Observation:** Training is **unstable**. Loss starts at ~1850, fluctuates and stagnates near 1820. KL divergence from the beginning stays within 45-48 range. Reconstructions are **moderately visible but blurry**. The latent space is approximately Gaussian (mean $\approx 0$, variance $\approx 1$) but shows no class-wise clustering in t-SNE. Earlier hypothesis about limitations of MLP encoder and having CNN encoder might improve the reconstruction quality and latent structure is not validated.
+
+<details>
+<summary>Results (CIFAR-10)</summary>
+
+| Reconstructions | Total Loss | Reconstruction Loss | KL Divergence |
+|:---:|:---:|:---:|:---:|
+| ![](images/cifar_bernoulli_cnn.png) | ![](images/cifar_bernoulli_cnn_total_loss.png) | ![](images/cifar_bernoulli_cnn_reconst_loss.png) | ![](images/cifar_bernoulli_cnn_kl_term.png) |
+
+| t-SNE of Latent Space | Same-class Interpolation | Cross-class Interpolation | Random Samples |
+|:---:|:---:|:---:|:---:|
+| ![](images/cifar_bernoulli_cnn_tSNE.png) | ![](images/cifar_bernoulli_cnn_same_digit_interpolated.png) | ![](images/cifar_bernoulli_cnn_different_digit_interpolated.png) | ![](images/cifar_bernoulli_cnn_randomly_sampled_z.png) |
+
+</details>
+
+---
+
 ## Summary of Results
 
 | # | Dataset | Decoder | Variance | Stability | Reconstruction Quality | Latent Structure |
@@ -161,9 +182,10 @@ Same multi-sample Monte Carlo approach as the Gaussian CIFAR-10 experiment, but 
 | 1 | MNIST | Gaussian | Per-pixel (unconstrained) | Unstable | Noisy | — |
 | 2 | MNIST | Gaussian | Per-pixel (clamped) | Moderate | Blurry, noisy | — |
 | 3 | MNIST | Gaussian | Global learnable | Stable | Clear, slightly noisy | ~Standard normal, Tightly clustered |
-| 4 | CIFAR-10 | Gaussian | Global learnable | Stable | Extremely noisy | No clustering, Standard Normal |
+| 4 | CIFAR-10 | Gaussian | Global learnable | Most Stable | Slightly visible but noisy | No clustering, Standard Normal |
 | 5 | MNIST | Bernoulli | N/A | Most stable | Sharp, clear | Loosely clustered, Not matching prior |
-| 6 | CIFAR-10 | Bernoulli | N/A | Stable | Better than Gaussian, still blurry | No clustering, Standard Normal |
+| 6 | CIFAR-10 | Bernoulli | N/A | Stable | Not noisy but very blurry | No clustering, Standard Normal |
+| 7 | CIFAR-10 (CNN) | Bernoulli | N/A | Unstable | Moderately visible, no noise but blurry | No clustering, Standard Normal |
 
 ---
 
@@ -183,9 +205,11 @@ Same multi-sample Monte Carlo approach as the Gaussian CIFAR-10 experiment, but 
 
 For **simple datasets** like MNIST, an MLP-based VAE can learn meaningful latent structure. Latent interpolations produce semantically consistent outputs, and both Bernoulli and (properly configured) Gaussian decoders achieve reasonable reconstruction quality.
 
-For **complex datasets** like CIFAR-10, an MLP encoder is insufficient. Even with stable training and proper likelihood modeling, the latent space lacks structure and reconstructions remain blurry.
+For **complex datasets** like CIFAR-10, it is likely that an MLP encoder is insufficient. Even with stable training and proper likelihood modeling, the latent space lacks structure and reconstructions remain blurry. (edit: based on experiment 7, even with CNN encoder, the latent space lacks structure and reconstructions improve slightly but remain blurry)
 
 A **CNN-based encoder and decoder** is expected to:
-- Capture spatial correlations in the input
-- Learn more informative latent representations
-- Improve reconstruction quality and semantic consistency in the latent space
+- Capture spatial correlations in the input 
+- Learn more informative latent representations [didn't happen as per experiment 7] (edited)
+- Improve reconstruction quality and semantic consistency in the latent space [reconstruction quality improved slightly but no improvement in the latent representation clustering] (edited)
+
+
