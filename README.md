@@ -22,9 +22,21 @@ Extends the autoencoder by mapping inputs to a *distribution* over latent space 
 - From-scratch implementation with reparameterization trick
 - Bernoulli and Gaussian decoder likelihoods
 - Experiments across different variance parameterizations (unconstrained, clamped, global learnable)
+- CNN encoder experiment on CIFAR-10 to test whether spatial feature extraction improves latent structure
 - Evaluated on MNIST and CIFAR-10
 - Detailed observations on training stability, reconstruction quality, and latent space structure
 - [Full experiment write-up →](VAE/README.md)
+
+### [CLIP — Contrastive Language-Image Pretraining](CLIP/)
+
+Implementation of CLIP's contrastive learning framework that aligns image and text representations into a shared embedding space — enabling zero-shot transfer learning. Includes a from-scratch Vision Transformer and decoder-only text transformer, alongside experiments with pretrained encoders.
+
+- From-scratch ViT + decoder-only transformer implementation
+- Pretrained encoder experiments: ResNet18 + BERT, ViT-B/16 + BERT
+- Temperature scaling study across fixed (0.07, 0.1, 0.5) and learnable temperatures
+- InfoNCE loss (symmetric cross-entropy) with R@1 evaluation
+- Trained on Flickr8k
+- [Full experiment write-up →](CLIP/README.md)
 
 ---
 
@@ -32,7 +44,9 @@ Extends the autoencoder by mapping inputs to a *distribution* over latent space 
 
 Upcoming topics as I continue this journey:
 
-- [ ] CLIP
+- [x] Autoencoder
+- [x] VAE
+- [x] CLIP
 - [ ] VQ-VAE
 - [ ] Multimodal Models (Vision-Language)
 
@@ -46,6 +60,10 @@ Upcoming topics as I continue this journey:
 │   └── Autoencoder.ipynb
 ├── VAE/
 │   ├── VAE.ipynb
+│   ├── README.md
+│   └── images/
+├── CLIP/
+│   ├── CLIP.ipynb
 │   ├── README.md
 │   └── images/
 └── README.md
