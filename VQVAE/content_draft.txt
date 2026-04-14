@@ -1,0 +1,31 @@
+I implemented VQVAE from scratch. My implementations are divided into three categories based on how codebook is updated: Gradient Descent based update, EMA codebook update and EMA update + codebook restart for underutilized codes.
+
+The reason by this implementation was to understand VQVAE at mechanism and architecture level after reading the "Neural Discrete Representation Learning" paper. 
+
+VAE failure modes?
+- in vae, model (encoder + decoder) learns by optimizing reconstruction loss and kl divergence
+- the encoder outputs latent distribution from which z is sampled and decoder reconstructs x from sampled z
+- however, a strong autoregressive deocer like transformer and pixelcnn are capable of modeling p(x) without latent vector z i.e. decoder models distribution as p(x|x-1) and not p(x|z). and thus ignoring z, which results in q(z|x) exactly matching p(z) (prior) and encoder doesn't encode anything meaningful and kl->0. This is called posterior collapse. Yes, the model minimizes ELBO but latent space isn't useful.
+- vqvae overcomes this. it doesn't have probabilistic bottleneck, here the encoder output gets matched to the nearest codebook vector. in vqvae there's no "ignore z and minimize kl" thing which rewards or benefits the model, in contrast, here ignoring z makes reconstruction (decoder) worse with no compensating loss term like kl going down. so there's no or less incentive in vqvae to ignore z and posterior collapse
+
+Why not VAE and continuous latent space?
+- in my vae experiment, randomly sampling latent from prior after training generated garbage image.
+- because standard normal prior is weak prior. during training kl term pushes q(z|x) - posterior never exactly matches that distribution, and even if it matches then encoder stops encoding meaningful latents since for all the images x, the latents share the same region in latent space, which is called posterior collapse.
+[image]
+- as can be seen in the graph, both the images' latent distribution are overlapping and hence are not meaningful
+- in reality, q(z|x) comes close to standard normal but doesn't exactly match it.
+[image]
+- q(z) is an aggregate posterior, a mixture of gaussians, one per training example. and as can be seen from the graph, the standard normal is poor approximation to this. and random sampled z from prior can give some z which lands in the empty space where no training image ever mapped to and hence decoder generates garbage.
+- vae fix: the new prior is learnt to fit the aggregate posterior q(z) after vae training, and then sample from this newly learnt prior instead of standard normal. but learning a prior over continuous latent spaces is difficult. why? because there is infinite space and hence infinite possible latents. and in order to sample well from new prior, we need to learn the q(z) which has complicated distribution and learn its structure: empty regions, correlations between dimensions and modes.
+- vqvae:
+-- does vqvae not need to learn prior?
+-- no, vqvae needs to learn prior. during training vqvae has a fixed uniform prior, p(z)-1/k and it is very approximation of encoder's output over different training samples. so in order to sample well, we need to learn prior that models aggregate posterior q(z).
+-- learning prior: learning prior in case of discrete latent space is easy because there is no infinite possible latent embeddings, no gaussian approximation, no empty spaces. every sampled code sequence is guaranteed to be in the codebook. so we just have to learn the distribution of discrete codes (indices of discrete latent embeddings) over sequence of integers, which can be very well handled by autoregressive model (transformers). we can sample discrete codes autoregressively from prior and then get corresponding discrete latent embeddig from codebook based on code sequence, use decoder to generate.
+
+
+Why discrete vectors?
+- because it is a more natural fit than continuous vectors over many modalities.
+- language is discrete, speech is represented as a sequence of symbols, images can often be described by language.
+
+
+There is one problem with mapping z_e(x) to codebook that argmin is non-differentiable and gradients can't flow back. So we copy gradient of z_q(x) to z_e(x). since both the representations share same D dimensional space, the gradients contain useful information for how the encoder has to change its output to lower the reconstruction error.

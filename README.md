@@ -38,6 +38,16 @@ Implementation of CLIP's contrastive learning framework that aligns image and te
 - Trained on Flickr8k
 - [Full experiment write-up →](CLIP/README.md)
 
+### [VQ-VAE — Vector Quantized Variational Autoencoder](VQVAE/)
+
+From-scratch implementation of VQ-VAE to understand discrete latent representations after reading the "Neural Discrete Representation Learning" paper. Explores why discrete latent spaces overcome VAE's posterior collapse and weak prior problems, and why learning a prior over discrete codes is easier than over continuous space.
+
+- Three codebook update strategies: gradient descent, EMA, and EMA + codebook restart
+- 8 experiments investigating codebook collapse, utilization, and reconstruction quality
+- Background on VAE failure modes (posterior collapse, weak prior, aggregate posterior)
+- Evaluated on CIFAR-10 with LPIPS and rFID
+- [Full experiment write-up →](VQVAE/README.md)
+
 ---
 
 ## Roadmap
@@ -47,7 +57,7 @@ Upcoming topics as I continue this journey:
 - [x] Autoencoder
 - [x] VAE
 - [x] CLIP
-- [ ] VQ-VAE
+- [x] VQ-VAE
 - [ ] Multimodal Models (Vision-Language)
 
 ---
@@ -64,6 +74,10 @@ Upcoming topics as I continue this journey:
 │   └── images/
 ├── CLIP/
 │   ├── CLIP.ipynb
+│   ├── README.md
+│   └── images/
+├── VQVAE/
+│   ├── VQVAE.ipynb
 │   ├── README.md
 │   └── images/
 └── README.md
