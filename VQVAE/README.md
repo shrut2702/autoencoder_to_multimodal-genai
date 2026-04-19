@@ -204,7 +204,7 @@ Decreasing decay from 0.99 to 0.80 so that codebook gives slightly more weight t
 
 ![Generated Samples](images/exp6_generated_samples.png)
 
-**Observation:** No improvement even after considering larger batch size.
+**Observation:** No improvement in codebook utilization even after considering larger batch size.
 
 ---
 
@@ -253,17 +253,62 @@ Codebook restart upon increased dead codes count.
 
 ---
 
+## Learning the Prior (Transformer Decoder)
+
+After successfully training the VQ-VAE (using EMA codebook update + restart for dead codes), the next step is to learn a prior over the discrete latent space. This is done by extracting the discrete codes (tokens) for the entire dataset using the trained VQ-VAE, and then training an autoregressive Transformer decoder on this sequence of tokens.
+
+### Experiment 1: Imagenette Dataset (128x128)
+
+First, the VQ-VAE was trained on the Imagenette dataset (resized to 128x128). The model successfully reconstructs good images.
+
+**VQ-VAE Training:**
+
+| | | |
+|---|---|---|
+| ![](images/vqvae_imagenette_total_loss.png) | ![](images/vqvae_imagenette_l3_loss.png) | ![](images/vqvae_imagenette_reconst_loss.png) |
+
+![VQ-VAE Reconstructions](images/vqvae_imagenette_reconst_samples.png)
+
+**Prior Training:**
+
+A latent dataset of ~2.5 million tokens was generated. A Transformer decoder was trained on this sequence. 
+However, the prior overfits because of the smaller dataset size and running for more epochs. As a result, the samples generated from the prior are not meaningful and look like garbage images.
+
+![Prior Loss](images/prior_imagenette_loss.png)
+
+![Prior Generated Samples](images/prior_imagenette_generated.png)
+
+---
+
+### Experiment 2: CIFAR-10 Dataset Upsampled (128x128)
+
+To address the overfitting issue, the next experiment used the CIFAR-10 dataset upsampled to 128x128. This provides more images, resulting in more discrete codes to train the data-hungry Transformer prior.
+
+**VQ-VAE Training:**
+
+| | | |
+|---|---|---|
+| ![](images/vqvae_cifar128_total_loss.png) | ![](images/vqvae_cifar128_l3_loss.png) | ![](images/vqvae_cifar128_reconst_loss.png) |
+
+![VQ-VAE Reconstructions](images/vqvae_cifar128_reconst_samples.png)
+
+**Prior Training:**
+
+This yielded a larger latent dataset of ~12 million tokens. The prior was trained for 2 epochs. The model didn't overfit this time. 
+However, 12 million tokens is still too low for a Transformer to learn meaningful patterns. Consequently, the samples generated from this prior are also garbage images.
+
+![Prior Loss](images/prior_cifar128_loss.png)
+
+![Prior Generated Samples](images/prior_cifar128_generated.png)
+
+---
+
 ## Key Takeaways
 
-- **Codebook utilization** is the central challenge in VQ-VAE training. Low utilization (codebook collapse) causes the model to stop learning — most codes go unused while a few popular codes carry all the load.
+- **Codebook utilization** is the central challenge in VQ-VAE training. Low utilization (codebook collapse) causes the model to stop learning — most codes go unused while a few popular codes carry all the load. (Edit: I thought low codebook utilization causes model to stop learning and it was the reason behind blurry images, but looking at exp 8, even with high codebook utilization (~1.0), the generation quality is still blurry and just slightly better than other experiments. So even though exp 8 generates blurry images, it seems model is learning well initially and stops improving as in other experiments because it has reached the minimum reconstruction loss it could achieve)
 - **Gradient descent codebook update** suffers from the rich-get-richer problem — only utilized codes get gradients, they keep getting selected, and further improve while unused codes stagnate.
 - **EMA update** is more stable and direct, but does not solve the codebook collapse on its own.
 - **Codebook restart** (re-initializing dead codes from encoder outputs) directly addresses codebook collapse.
 - The **straight-through estimator** makes training possible despite the non-differentiable quantization step — it works because encoder outputs and codebook vectors share the same embedding space.
+- **Learning the prior** with a Transformer requires a massive amount of data. Even ~12 million tokens is insufficient to learn meaningful global structures, resulting in garbage generated samples.
 
----
-
-## Future Work
-
-- Try beta=0.1 or lower — this will allow encoder output to be updated more towards improving reconstruction rather than being close to the assigned discrete code
-- Try LayerNorm on encoder's output (hypothesis: encoder output having same scale can solve codebook collapse)
