@@ -48,6 +48,17 @@ From-scratch implementation of VQ-VAE to understand discrete latent representati
 - Evaluated on CIFAR-10 with LPIPS and rFID
 - [Full experiment write-up →](VQVAE/README.md)
 
+### [VQ-VAE-2 — Hierarchical Vector Quantized Variational Autoencoder](VQVAE2/)
+
+Implementation of VQ-VAE-2 to explore hierarchical discrete latent representations. Investigates how splitting the latent space into top (global) and bottom (local) levels improves reconstruction quality and separates structural information from fine-grained details.
+
+- Hierarchical architecture with top and bottom codebooks
+- 7 experiments across two sets (with and without perceptual loss)
+- Investigation into the role of latent dimension in hierarchical collapse
+- Perceptual loss (LPIPS) integration and its impact on sharpness
+- Evaluated on Imagenette with LPIPS and rFID
+- [Full experiment write-up →](VQVAE2/README.md)
+
 ---
 
 ## Roadmap
@@ -58,6 +69,7 @@ Upcoming topics as I continue this journey:
 - [x] VAE
 - [x] CLIP
 - [x] VQ-VAE
+- [x] VQ-VAE-2
 - [ ] Multimodal Models (Vision-Language)
 
 ---
@@ -78,6 +90,10 @@ Upcoming topics as I continue this journey:
 │   └── images/
 ├── VQVAE/
 │   ├── VQVAE.ipynb
+│   ├── README.md
+│   └── images/
+├── VQVAE2/
+│   ├── VQ_VAE_2.ipynb
 │   ├── README.md
 │   └── images/
 └── README.md
