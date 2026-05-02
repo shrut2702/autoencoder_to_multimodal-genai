@@ -1,0 +1,189 @@
+# my notes on vq-vae-2
+vq-vae-2:
+- uses hierarchical codebook
+- the difference between these two isn't philosophical. the main idea still remains the same. image -> discrete latent codes -> reconstructed image
+- the difference is engineering: hierarchical latents instead of a single codebook
+
+motivation for hierarchical codes:
+- separation of information: local and global
+- bottom level models local information such as texture and other fine details
+- top level models global information such as shape and geometry of objects
+- here, bottom latent is conditioned on top latent so that it doesn't have to encode everything (global + local), and instead encode only whats left
+
+e.g.
+- lets say we are describing an image to two people sequentially
+- first person gets 10 words. and second person hears first description and has 50 words
+- first person would say "portrait of a woman, dark background"
+- second person doesn't repeat that since he already has heard what first person knows, so he says "curly red hair, blue eyes, slight smile"
+
+
+## kl divergence:
+
+kl(p||q) -> measures how different two distributions are
+
+### forward kl: kl(p_data||p_model)
+- penalized when p_data is high but p_model is low
+- wherever real data exists but model assigns low probability
+- model is forced to cover all modes of the data
+- it would rather be vague/spread out everywhere than miss a mode entirely
+- mean-seeking behaviour
+
+### backward kl: kl(p_model||p_data)
+- penalized when p_model is high but p_data is low
+- wherever model generates samples that don't exist in real data
+- model picks one or few modes and covers them well, completely ignoring others
+- mode-seeking behaviour
+
+the vq-vae-2 paper makes following point:
+- likelihood generative models like vae covers all modes but produces blurry images because of forward kl divergence nature of negative log likelihood
+- gan on the other hand, produces sharper images through implicit backward kl divergence but suffers from mode collapse
+- vq-vae-2 by bringing hierarchical codes and using strong prior pixelsnail produces sharper and diverse image 
+
+
+# experiment insights
+
+## First set
+- reconstruction loss + commitment loss
+- EMA codebook update
+- dataset: imagenette
+- training size: ~9k images
+- batch size: 8
+- epochs: 4
+- optimizer: Adam
+- lr: 1e-4
+
+### exp 1:
+- normalize codebook: true
+- latent dim: 64
+- codebook size: 512
+- hidden chaneels: 128
+- residual channels: 64
+
+observations:
+- top codebook utilization: 3%
+- bottom codebook utilization: 5%
+- based on image reconstructed from top codes only, the skeleton is visible i.e. global structure is clearly apparent and top encoder catpures it
+- based on image reconstructed from bottom codes only, the whole image is clearly visible just colors are off
+- LPIPS: 0.4385
+- rFID:  73.58
+
+### exp 2:
+- normalize codebook: true
+- latent dim: 8
+- codebook size: 512
+- hidden chaneels: 128
+- residual channels: 64
+
+observations:
+- top codebook utilization: 1%
+- bottom codebook utilization: 29%
+- image reconstructed from only top codes is plain and blank, which indicates that in this setup top encoder doesn't capture any information about image structure
+- based on image reconstructed from bottom codes only, the whole image is clearly visible and exactly matches image reconstructed from concatenated bottom and top codes, implying for reconstruction the decoder gets all the features and details (both local and global) from bottom codes only
+- LPIPS: 0.3863
+- rFID:  57.84
+
+### exp 3:
+- normalize codebook: false
+- latent dim: 8
+- codebook size: 512
+- hidden channels: 128
+- residual channels: 64
+
+observations:
+- top codebook utilization: 98%
+- bottom codebook utilization: 100%
+- based on image reconstructed from top codes only, the skeleton is visible i.e. global structure is clearly apparent and top encoder catpures it
+- based on image reconstructed from bottom codes only, the whole image is clearly visible just colors are off
+- LPIPS: 0.3461
+- rFID:  44.98
+- lower latent dimension increases codebook utilization, which further improves overall image quality (lpips and rfid)
+
+
+### exp 4:
+- normalize codebook: false
+- latent dim: 64
+- codebook size: 512
+- hidden channels: 128
+- residual channels: 64
+
+observations:
+- top codebook utilization: 7%
+- bottom codebook utilization: 16%
+- based on image reconstructed from top codes only, the skeleton is visible i.e. global structure is clearly apparent and top encoder catpures it
+- based on image reconstructed from bottom codes only, the whole image is clearly visible just colors are off
+- LPIPS: 0.3936
+- rFID:  55.15
+
+
+## Second set
+- reconstruction loss + commitment loss + perceptual loss
+- EMA codebook update
+- dataset: imagenette
+- training size: ~9k images
+- batch size: 8
+- epochs: 4
+- optimizer: Adam
+- lr: 1e-4
+
+
+### exp 5:
+- normalize codebook: false
+- latent dim: 8
+- codebook size: 512
+- hidden channels: 128
+- residual channels: 64
+- perceptual loss weight: 0.1
+
+observations:
+- top codebook utilization: 99%
+- bottom codebook utilization: 100%
+- based on image reconstructed from top codes only, the skeleton is faded and is barely visible i.e. global structure is not clearly apparent and top encoder catpures too little info
+- based on image reconstructed from bottom codes only, the whole image is clearly visible and matches the reconstructed image from both bottom and top codes, i.e., bottom codes contains most amount of information and top codes are barely contributing to reconstruction
+- LPIPS: 0.0967
+- rFID:  34.76
+- adding perceptual loss has significantly increased image sharpness and quality
+- lower latent dimension increases codebook utilization, which further improves overall image quality (lpips and rfid)
+
+
+### exp 6:
+- normalize codebook: false
+- latent dim: 8
+- codebook size: 512
+- hidden channels: 128
+- residual channels: 64
+- perceptual loss weight: 1
+
+observations:
+- top codebook utilization: 100%
+- bottom codebook utilization: 100%
+- based on image reconstructed from top codes only, the skeleton is faded and is barely visible i.e. global structure is not clearly apparent and top encoder catpures too little info
+- based on image reconstructed from bottom codes only, the whole image is clearly visible and matches the reconstructed image from both bottom and top codes, i.e., bottom codes contains most amount of information and top codes are barely contributing to reconstruction
+- LPIPS: 0.0974
+- rFID:  34.52
+- adding perceptual loss has significantly increased image sharpness and quality
+- increasing weight of perceptual loss didn't show any effect on image quality
+- lower latent dimension increases codebook utilization, which further improves overall image quality (lpips and rfid)
+
+
+
+### exp 7:
+to verify if the perceptual loss makes the top codes useless (not capturing global structure) based on observations of exp 5 and exp 6, this experiment was conducted since this experiment's non-perceptual loss alternative showed a clear skeleton from top codes
+
+- normalize codebook: true
+- latent dim: 64
+- codebook size: 512
+- hidden channels: 128
+- residual channels: 64
+- perceptual loss weight: 0.1
+
+observations:
+- top codebook utilization: 2%
+- bottom codebook utilization: 20%
+- based on image reconstructed from top codes only, the skeleton is visible i.e. global structure is clearly apparent and top encoder catpures it
+- based on image reconstructed from bottom codes only, the whole image is clearly visible 
+- meaning, the almost plain and faded skeleton in exp 5 and 6 was majorly due to its lower latent dim and perceptual loss had a very little role to play since without perceptual loss, the exp 3 (alternative of exp 5) reconstructed visible skeleton wven though it has lower latent dimension
+- LPIPS: 0.1198
+- rFID:  40.56
+- lower latent dimension increases codebook utilization, which further improves overall image quality (lpips and rfid)
+- since this experiment had higher latent dim than exp 5 and 6, the codebook utilization has been decreased considering smaller and less diverse dataset, which further slightly decreased image quality compared to lower latent dim
+
