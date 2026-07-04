@@ -1,0 +1,48 @@
+implemented text-image generation based on autoregressive image code generation philosophy.
+
+followed dall-e 1 paper.
+earlier text-image generaiton were modelling focused i.e. complex architectures, auxiliary losses, information about object paerts,etc.
+dall-e 1 leverages abundant data and scale with simple approach using transformers for autoregressive image generation by modeling concatenated text-image tokens
+
+
+the goal is to maximize p(x, y) - modeling joint probability of image caption pairs, to make model understand pairs.
+
+issue with directly modeling over image pixels:
+- directly modeling over image pixels is computationally very expensive, model will capture high-level or local details, rather than low-level details that capture global structure.
+
+soln: introduce z - discrete latent variable: image is encoded into discrete codes
+
+dall-e1 paper uses dVAE as image tokenizer but i have used VQVAE. both do the same thing: encodes image into discrete latent space for autoregressive modeling.
+
+implementation:
+1. train vqvae: 
+- vqvae's encoder acts as an image tokenizer in text to image generation training pipeline.
+- Decoder generates an image from auto regressively produced image codes during inference.
+2. train prior p(z) (transformer)
+- in vqvae the prior p(z) of discrete latent space (codebook) is uniform p(z1)- 1/K, K=codebook size. We need to learn the prior of image codes conditioned on text.
+- transformer models a single sequence of text tokens and image codes for each image caption pair.
+- For inference, the one caption transformer auto-regressively generates image codes which is then fed to the VQVAE decoder.
+
+Experiment 0:
+- coco dataset
+- trained both vqvae and transformers on ~118k images.
+[Abandoned]
+Abandoned because of its size and training time considering epochs. Since the goal is to implement it from scratch and see it working and not making a SOTA AR image generaiton model, I moved to smaller dataset i.e. Flickr8k
+
+Flickr8k Exp1:
+- flicker8k dataset
+- trained both vqvae and transformer on ~6k images. Used latent-dim=64 and latent_grid = 32*32
+- in initial transformer run i kept 12 layers for 1 epoch
+- the teacher-forced code generation produced caption-aligned and perceptual image
+- but ar image codes produced plain images
+- so, i considered training transformer for more epochs, but the data set is too small for data hungry transformers which would overfit the data. So I reduced the layers to six and trained it for 15 epochs. Model overfitted. still teacher forced produced good images and AR image codes produced plain or garbage images. Even though the model was overfitted, it wasn't trained much to converge the training loss (again because of its time). At this point, I knew that the scale of data was the issue, but wanted to make sure if the cause wasn't anything else. Upon inspecting AR generated image code sequence, only three to ten unique codes were getting repeated. So I thought low codebook utilization is populating training image code sequences with the same codes and model is learning to generate that only as a safe option upon drifting from target sequence.
+- so, i conducted exp 2
+
+Flickr8k Exp2:
+- Keeping everything else same. I reduced latent dim dimension to eight, which enforced higher codebook utilization. Results still same. Even though code book utilization was high, results remain same. Upon verifying entropy of earlier experiment and these in both cases, they were high.
+
+Flickr8k Exp3:
+- I suspected that local attention for image codes might cause generation of repeated codes during longer (1024) AR code generation.
+- No image position ever attend to the full prefix. And that's why when predicting code t, the strongest context is its immediate neighbors. When a model emits a constant patch, then for next code to be predicted, the local window becomes a constant and predicts same code as its neighbor. So in this experiment I incorporated single causal mask attention. Also increase the data set diversity by using all five captions for image instead of one so the text conditioning data grows. Still the text based generated image were garbage or plain.
+- Lastly, I ran an experiment to intentionally overfit the transformer over training set of only hundred images and see if good images are generated based on caption from training set only. I ran for fifty epochs. Model was overfitting the training sequences while performance over validation set became worse. But as expected, the image generated from training captions were very good and recognizable.
+- This confirms the issue all along was the scale of data. And these overfitted model proved pipeline works, but model is not generalizable without the huge quantity of data.
