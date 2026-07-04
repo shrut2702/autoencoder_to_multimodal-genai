@@ -59,6 +59,17 @@ Implementation of VQ-VAE-2 to explore hierarchical discrete latent representatio
 - Evaluated on Imagenette with LPIPS and rFID
 - [Full experiment write-up →](VQVAE2/README.md)
 
+### [Autoregressive Image Gen (DALL·E 1 Style)](Autoregressive_Image_Gen/)
+
+From-scratch implementation of autoregressive text-to-image generation based on the DALL·E 1 paper. Instead of modeling complex architectures or auxiliary losses directly over image pixels, this project leverages a simple approach: quantizing images into discrete codes using a VQ-VAE, concatenating text and image tokens, and training a decoder-only transformer to autoregressively model the joint distribution p(x, y).
+
+- Stage 1: VQ-VAE image tokenizer (downsampling images to 32×32 discrete code grids)
+- Stage 2: Transformer prior (conditioned on GPT-2 tokenized captions)
+- 4 sequential experiments focusing on local vs. full causal attention masks, and training scale
+- Validation via intentional overfitting on a small 100-image subset to prove pipeline correctness
+- Evaluated on COCO and Flickr8k datasets
+- [Full experiment write-up →](Autoregressive_Image_Gen/README.md)
+
 ---
 
 ## Roadmap
@@ -70,6 +81,7 @@ Upcoming topics as I continue this journey:
 - [x] CLIP
 - [x] VQ-VAE
 - [x] VQ-VAE-2
+- [x] Autoregressive Image Gen (DALL·E 1)
 - [ ] Multimodal Models (Vision-Language)
 
 ---
@@ -96,7 +108,12 @@ Upcoming topics as I continue this journey:
 │   ├── VQ_VAE_2.ipynb
 │   ├── README.md
 │   └── images/
+├── Autoregressive_Image_Gen/
+│   ├── Autoregressive_image_generation_latest.ipynb
+│   ├── README.md
+│   └── result.png
 └── README.md
 ```
 
 Each topic lives in its own directory with implementation notebooks, experiment images, and (where applicable) a dedicated README with detailed observations.
+
