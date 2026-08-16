@@ -1,6 +1,6 @@
 # From Autoencoders to Multimodal Generative AI
 
-A hands-on learning repository documenting my journey through generative AI — from foundational models to multimodal LLM. Each topic includes from-scratch implementations, experiments, and detailed observations.
+A hands-on learning repository documenting my journey through generative AI, from foundational models to autoregressive image generation. Each topic includes from-scratch implementations, experiments and detailed observations.
 
 This is a living repository. New topics will be added as I work through them.
 
@@ -67,7 +67,6 @@ From-scratch implementation of autoregressive text-to-image generation based on 
 - Stage 2: Transformer prior (conditioned on GPT-2 tokenized captions)
 - 4 sequential experiments focusing on local vs. full causal attention masks, and training scale
 - Validation via intentional overfitting on a small 100-image subset to prove pipeline correctness
-- Evaluated on COCO and Flickr8k datasets
 - [Full experiment write-up →](Autoregressive_Image_Gen/README.md)
 
 ---
@@ -82,7 +81,6 @@ Upcoming topics as I continue this journey:
 - [x] VQ-VAE
 - [x] VQ-VAE-2
 - [x] Autoregressive Image Gen (DALL·E 1)
-- [ ] Multimodal Models (Vision-Language)
 
 ---
 
