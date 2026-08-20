@@ -1,117 +1,70 @@
-# From Autoencoders to Multimodal Generative AI
+# Generative AI from Scratch
 
-A hands-on learning repository documenting my journey through generative AI, from foundational models to autoregressive image generation. Each topic includes from-scratch implementations, experiments and detailed observations.
+From-scratch PyTorch implementations of the core generative-vision papers: VAE, VQ-VAE, VQ-VAE-2, CLIP, and DALL·E-1-style autoregressive text-to-image. Each one is built to understand the mechanism, then pushed through ablations and written up, including the experiments that failed and why.
 
-This is a living repository. New topics will be added as I work through them.
+No wrappers, no `from diffusers import ...`. Every encoder, quantizer, transformer block, and loss is implemented by hand and studied through controlled experiments.
 
 ---
 
-## Topics Covered
+## Results at a glance
+
+<table>
+<tr>
+<td align="center"><img src="Autoregressive_Image_Gen/result.png" width="240"><br><b>DALL·E-1-style AR</b><br>text → image tokens</td>
+<td align="center"><img src="VQVAE2/images/exp5_generated_samples.png" width="240"><br><b>VQ-VAE-2</b><br>LPIPS 0.097 with perceptual loss</td>
+</tr>
+<tr>
+<td align="center"><img src="VQVAE/images/vqvae_imagenette_reconst_samples.png" width="240"><br><b>VQ-VAE</b><br>Imagenette reconstructions</td>
+<td align="center"><img src="VAE/images/mnist_bernoulli_beta_1.png" width="240"><br><b>VAE</b><br>Bernoulli decoder, MNIST</td>
+</tr>
+</table>
+
+| Topic | Paper | Dataset | Eval | Headline result |
+|---|---|---|---|---|
+| [**Autoencoder**](Autoencoder/) | — | MNIST | qualitative | Deterministic baseline for latent representations |
+| [**VAE**](VAE/README.md) | Kingma & Welling '13 | MNIST, CIFAR-10 | qualitative (recon, latent structure) | Bernoulli decoder → sharp MNIST; **traced why an MLP encoder fails on CIFAR-10** across 7 likelihood/variance setups |
+| [**CLIP**](CLIP/README.md) | Radford et al. '21 | Flickr8k | R@1 retrieval | From-scratch ViT + text transformer; **temperature-scaling study** (τ = 0.07 / 0.1 / 0.5 / learnable) |
+| [**VQ-VAE**](VQVAE/README.md) | van den Oord et al. '17 | CIFAR-10, Imagenette | LPIPS, rFID | **Codebook restart → ~100% utilization** (8 experiments on collapse); prior needs data at scale |
+| [**VQ-VAE-2**](VQVAE2/README.md) | Razavi et al. '19 | Imagenette | LPIPS, rFID | Perceptual loss: **LPIPS 0.44 → 0.097, rFID 74 → 34.5**; isolated the real cause of top-level collapse |
+| [**Autoregressive T2I**](Autoregressive_Image_Gen/README.md) | Ramesh et al. '21 | Flickr8k, COCO | qualitative | Two-stage VQ-VAE + transformer prior; **debugged garbage samples down to data scale, not codebook collapse** |
+
+---
+
+## The projects
+
+Every folder holds the implementation notebook, the experiment write-up, and the result images.
 
 ### [Autoencoder](Autoencoder/)
 
-Standard autoencoder implementation that learns deterministic compression of input data into a fixed latent vector and reconstructs it back. Serves as the foundation for understanding latent representations before moving to probabilistic models.
+Deterministic encoder and decoder on MNIST, compressing an image to a fixed latent vector. The baseline to compare everything probabilistic against.
 
-- Deterministic encoder-decoder architecture
-- Trained on MNIST
+### [VAE](VAE/README.md)
 
-### [Variational Autoencoder (VAE)](VAE/)
+Seven experiments over decoder likelihoods and variance parameterizations. Unconstrained per-pixel variance makes training unstable, clamping it limits the decoder, and a single global learnable variance turned out to be the stable choice. Bernoulli decoders gave the sharpest MNIST digits. On CIFAR-10 the latents matched the prior but carried no class structure, so I swapped the MLP encoder for a CNN to test whether spatial features were the missing piece. They weren't: reconstructions improved slightly and the latent space stayed unclustered.
 
-Extends the autoencoder by mapping inputs to a *distribution* over latent space instead of a fixed vector. The encoder outputs mean and variance of an approximate posterior, and the KL divergence term regularizes it against a standard normal prior — enabling structured, sample-able latent spaces.
+### [CLIP](CLIP/README.md)
 
-- From-scratch implementation with reparameterization trick
-- Bernoulli and Gaussian decoder likelihoods
-- Experiments across different variance parameterizations (unconstrained, clamped, global learnable)
-- CNN encoder experiment on CIFAR-10 to test whether spatial feature extraction improves latent structure
-- Evaluated on MNIST and CIFAR-10
-- Detailed observations on training stability, reconstruction quality, and latent space structure
-- [Full experiment write-up →](VAE/README.md)
+A ViT and a decoder-only text transformer written from scratch, plus runs with frozen pretrained encoders (ResNet18 + BERT, ViT-B/16 + BERT) where only the projection layers train. Trained on Flickr8k with symmetric InfoNCE and evaluated by R@1. Temperature was the interesting knob: 0.5 converged faster and retrieved better than 0.07. The from-scratch encoders performed far worse and overfit, which is what 6k pairs buys you.
 
-### [CLIP — Contrastive Language-Image Pretraining](CLIP/)
+### [VQ-VAE](VQVAE/README.md)
 
-Implementation of CLIP's contrastive learning framework that aligns image and text representations into a shared embedding space — enabling zero-shot transfer learning. Includes a from-scratch Vision Transformer and decoder-only text transformer, alongside experiments with pretrained encoders.
+Eight experiments across three ways of updating the codebook: gradient descent, EMA, and EMA with dead-code restart. Gradient descent has a rich-get-richer problem, and utilization stayed near 10% no matter how large the batch or the latent dim. Restarting dead codes pushed utilization to roughly 100%. The surprise was that it barely helped image quality, which killed my assumption that collapse was what made samples blurry. Training a transformer prior on 12M tokens still produced garbage, so the prior is a data-scale problem.
 
-- From-scratch ViT + decoder-only transformer implementation
-- Pretrained encoder experiments: ResNet18 + BERT, ViT-B/16 + BERT
-- Temperature scaling study across fixed (0.07, 0.1, 0.5) and learnable temperatures
-- InfoNCE loss (symmetric cross-entropy) with R@1 evaluation
-- Trained on Flickr8k
-- [Full experiment write-up →](CLIP/README.md)
+### [VQ-VAE-2](VQVAE2/README.md)
 
-### [VQ-VAE — Vector Quantized Variational Autoencoder](VQVAE/)
+Seven experiments on the two-level hierarchy, with and without perceptual loss. Codebook normalization is what suppresses utilization: 3% and 5% with it, 98% and 100% without. Perceptual loss cut LPIPS from 0.3461 to 0.0967 and rFID from 44.98 to 34.76. It also looked like perceptual loss was collapsing the top level, until a diagnostic run at `latent_dim=64` with the same loss produced a clear structural skeleton. The low latent dimension was the cause, not the loss.
 
-From-scratch implementation of VQ-VAE to understand discrete latent representations after reading the "Neural Discrete Representation Learning" paper. Explores why discrete latent spaces overcome VAE's posterior collapse and weak prior problems, and why learning a prior over discrete codes is easier than over continuous space.
+### [Autoregressive text-to-image](Autoregressive_Image_Gen/README.md)
 
-- Three codebook update strategies: gradient descent, EMA, and EMA + codebook restart
-- 8 experiments investigating codebook collapse, utilization, and reconstruction quality
-- Background on VAE failure modes (posterior collapse, weak prior, aggregate posterior)
-- Evaluated on CIFAR-10 with LPIPS and rFID
-- [Full experiment write-up →](VQVAE/README.md)
-
-### [VQ-VAE-2 — Hierarchical Vector Quantized Variational Autoencoder](VQVAE2/)
-
-Implementation of VQ-VAE-2 to explore hierarchical discrete latent representations. Investigates how splitting the latent space into top (global) and bottom (local) levels improves reconstruction quality and separates structural information from fine-grained details.
-
-- Hierarchical architecture with top and bottom codebooks
-- 7 experiments across two sets (with and without perceptual loss)
-- Investigation into the role of latent dimension in hierarchical collapse
-- Perceptual loss (LPIPS) integration and its impact on sharpness
-- Evaluated on Imagenette with LPIPS and rFID
-- [Full experiment write-up →](VQVAE2/README.md)
-
-### [Autoregressive Image Gen (DALL·E 1 Style)](Autoregressive_Image_Gen/)
-
-From-scratch implementation of autoregressive text-to-image generation based on the DALL·E 1 paper. Instead of modeling complex architectures or auxiliary losses directly over image pixels, this project leverages a simple approach: quantizing images into discrete codes using a VQ-VAE, concatenating text and image tokens, and training a decoder-only transformer to autoregressively model the joint distribution p(x, y).
-
-- Stage 1: VQ-VAE image tokenizer (downsampling images to 32×32 discrete code grids)
-- Stage 2: Transformer prior (conditioned on GPT-2 tokenized captions)
-- 4 sequential experiments focusing on local vs. full causal attention masks, and training scale
-- Validation via intentional overfitting on a small 100-image subset to prove pipeline correctness
-- [Full experiment write-up →](Autoregressive_Image_Gen/README.md)
+A VQ-VAE tokenizer turning 128×128 images into 32×32 code grids, then a decoder-only transformer over caption tokens followed by image codes, with classifier-free guidance at inference. Teacher-forced generation looked fine while autoregressive sampling emitted the same 3 to 10 codes over and over. I blamed low codebook utilization, then an entropy check ruled that out. Next suspect was the local attention mask, so I replaced it with a single causal mask. What settled it was overfitting 100 images on purpose: the samples came back recognizable and caption-aligned, which proved the pipeline worked and pinned the failure on data scale.
 
 ---
 
 ## Roadmap
-
-Upcoming topics as I continue this journey:
 
 - [x] Autoencoder
 - [x] VAE
 - [x] CLIP
 - [x] VQ-VAE
 - [x] VQ-VAE-2
-- [x] Autoregressive Image Gen (DALL·E 1)
-
----
-
-## Repository Structure
-
-```
-.
-├── Autoencoder/
-│   └── Autoencoder.ipynb
-├── VAE/
-│   ├── VAE.ipynb
-│   ├── README.md
-│   └── images/
-├── CLIP/
-│   ├── CLIP.ipynb
-│   ├── README.md
-│   └── images/
-├── VQVAE/
-│   ├── VQVAE.ipynb
-│   ├── README.md
-│   └── images/
-├── VQVAE2/
-│   ├── VQ_VAE_2.ipynb
-│   ├── README.md
-│   └── images/
-├── Autoregressive_Image_Gen/
-│   ├── Autoregressive_image_generation_latest.ipynb
-│   ├── README.md
-│   └── result.png
-└── README.md
-```
-
-Each topic lives in its own directory with implementation notebooks, experiment images, and (where applicable) a dedicated README with detailed observations.
-
+- [x] Autoregressive Image Generation (DALL·E-1 style)
