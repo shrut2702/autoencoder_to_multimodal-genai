@@ -40,14 +40,11 @@ The decoder outputs both $\mu(x|z)$ and $\sigma^2(x|z)$ per pixel, with no const
 
 **Observation:** Training is **unstable**. The decoder produces highly noisy reconstructions. Unconstrained variance allows extreme values that destabilize the likelihood optimization.
 
-<details>
-<summary>Results (MNIST)</summary>
+**Results (MNIST)**
 
 | Reconstructions | Total Loss | Reconstruction Loss | KL Divergence |
 |:---:|:---:|:---:|:---:|
 | ![](images/mnist_gaussian_var_z_not_clamped.png) | ![](images/mnist_gaussian_var_z_not_clamped_total_loss.png) | ![](images/mnist_gaussian_var_z_not_clamped_reconst_loss.png) | ![](images/mnist_gaussian_var_z_not_clamped_kl_term.png) |
-
-</details>
 
 ---
 
@@ -57,14 +54,11 @@ Log-variance is clamped within a fixed range (e.g., $[-4, 4]$).
 
 **Observation:** Training is **more stable** than the unconstrained case. Reconstructions improve slightly — the model starts capturing the data distribution. However, the loss stagnates (~-250) and reconstructions remain **blurry and noisy**. Hard clamping stabilizes training but introduces optimization constraints that limit decoder expressivity.
 
-<details>
-<summary>Results (MNIST)</summary>
+**Results (MNIST)**
 
 | Reconstructions | Total Loss | Reconstruction Loss | KL Divergence |
 |:---:|:---:|:---:|:---:|
 | ![](images/mnist_gaussian_var_z_clamped.png) | ![](images/mnist_gaussian_var_z_clamped_total_loss.png) | ![](images/mnist_gaussian_var_z_clamped_reconst_loss.png) | ![](images/mnist_gaussian_var_z_clamped_kl_term.png) |
-
-</details>
 
 ---
 
@@ -74,8 +68,7 @@ The decoder predicts per-pixel mean conditioned on $z$, but uses a **single glob
 
 **Observation:** **Most stable training** among all Gaussian setups. Loss stabilizes (~300). The latent space is approximately standard normal (mean $\approx 0$, variance $\approx 1$ across dimensions). Reconstructions show **visually clearer digits**, though slightly noisy. Reducing variance flexibility improves optimization stability and encourages better latent regularization.
 
-<details>
-<summary>Results (MNIST)</summary>
+**Results (MNIST)**
 
 | Reconstructions | Total Loss | Reconstruction Loss | KL Divergence |
 |:---:|:---:|:---:|:---:|
@@ -85,8 +78,6 @@ The decoder predicts per-pixel mean conditioned on $z$, but uses a **single glob
 |:---:|:---:|:---:|:---:|
 | ![](images/mnist_gaussian_global_var_tSNE.png) | ![](images/mnist_gaussian_global_var_same_digit_interpolated.png) | ![](images/mnist_gaussian_global_var_different_digit_interpolated.png) | ![](images/mnist_gaussian_global_var_randomly_sampled_z.png) |
 
-</details>
-
 ---
 
 ### Experiment 4 — CIFAR-10 + Multi-sample Gaussian Decoder
@@ -95,8 +86,7 @@ Global variance decoder with multiple latent samples $z_1, ..., z_n \sim q(z|x)$
 
 **Observation:** Loss converges (~1800) then stagnates. Reconstructions are **slightly visible but very noisy**. KL divergence starts high and smoothly increases 220 and stagnates. The latent space is approximately Gaussian (mean $\approx 0$, variance $\approx 1$) but shows **no clear clustering** across classes in t-SNE. Although the latent distribution matches the prior, the encoder fails to learn informative representations — likely due to using an MLP encoder for high-dimensional structured data. CIFAR-10's high intra-class variability (background, color, texture) makes compression with a simple MLP less expressive.
 
-<details>
-<summary>Results (CIFAR-10)</summary>
+**Results (CIFAR-10)**
 
 | Reconstructions | Total Loss | Reconstruction Loss | KL Divergence |
 |:---:|:---:|:---:|:---:|
@@ -105,8 +95,6 @@ Global variance decoder with multiple latent samples $z_1, ..., z_n \sim q(z|x)$
 | t-SNE of Latent Space | Same-class Interpolation | Cross-class Interpolation | Random Samples |
 |:---:|:---:|:---:|:---:|
 | ![](images/cifar_gaussian_global_var_tSNE.png) | ![](images/cifar_gaussian_global_var_same_digit_interpolated.png) | ![](images/cifar_gaussian_global_var_different_digit_interpolated.png) | ![](images/cifar_gaussian_global_var_randomly_sampled_z.png) |
-
-</details>
 
 ---
 
@@ -118,8 +106,7 @@ Decoder outputs Bernoulli probabilities. Reconstruction uses the **mean (probabi
 
 **Observation:** **Most stable training** overall. KL divergence stays within a reasonable range and stabilizes (~20k steps). Reconstructions are **sharp and clearly visible** — not blurry. However, the latent space is only loosely clustered and does **not strictly match the standard normal prior**. Even with good reconstructions, the encoder is not fully aligned with the prior, which manifests in latent interpolations producing inconsistent outputs — the latent space is not semantically smooth.
 
-<details>
-<summary>Results (MNIST)</summary>
+**Results (MNIST)**
 
 | Reconstructions | Total Loss | Reconstruction Loss | KL Divergence |
 |:---:|:---:|:---:|:---:|
@@ -129,8 +116,6 @@ Decoder outputs Bernoulli probabilities. Reconstruction uses the **mean (probabi
 |:---:|:---:|:---:|:---:|
 | ![](images/mnist_bernoulli_beta_1_tSNE.png) | ![](images/mnist_bernoulli_beta_1_same_digit_interpolated.png) | ![](images/mnist_bernoulli_beta_1_different_digit_interpolated.png) | ![](images/mnist_bernoulli_beta_1_randomly_sampled.png) |
 
-</details>
-
 ---
 
 ### Experiment 6 — CIFAR-10 + Multi-sample Bernoulli Decoder
@@ -139,8 +124,7 @@ Same multi-sample approach as the Gaussian CIFAR-10 experiment, but with Bernoul
 
 **Observation:** Training is **stable**. KL divergence increases within a reasonable range and stabilizes. Reconstructions are **blurry and not noisy but lack detail and is less visible**. Loss stagnates (~1850). The latent space is approximately Gaussian (mean $\approx 0$, variance $\approx 1$) but shows no class-wise clustering in t-SNE. Hypothesis: the same fundamental limitation persists, the MLP encoder struggles with the complex image distribution and high intra-class variability prevents meaningful latent clustering.
 
-<details>
-<summary>Results (CIFAR-10)</summary>
+**Results (CIFAR-10)**
 
 | Reconstructions | Total Loss | Reconstruction Loss | KL Divergence |
 |:---:|:---:|:---:|:---:|
@@ -150,8 +134,6 @@ Same multi-sample approach as the Gaussian CIFAR-10 experiment, but with Bernoul
 |:---:|:---:|:---:|:---:|
 | ![](images/cifar_bernoulli_global_var_tSNE.png) | ![](images/cifar_bernoulli_global_var_same_digit_interpolated.png) | ![](images/cifar_bernoulli_global_var_different_digit_interpolated.png) | ![](images/cifar_bernoulli_global_var_randomly_sampled_z.png) |
 
-</details>
-
 ---
 
 ### Experiment 7 - CIFAR 10 + CNN Encoder + Multi-sample Bernoulli Decoder
@@ -160,8 +142,7 @@ Same experiment as experiment 6 (multi-sample Bernoulli decoder) but with CNN en
 
 **Observation:** Training is **unstable**. Loss starts at ~1850, fluctuates and stagnates near 1820. KL divergence from the beginning stays within 45-48 range. Reconstructions are **moderately visible but blurry**. The latent space is approximately Gaussian (mean $\approx 0$, variance $\approx 1$) but shows no class-wise clustering in t-SNE. Earlier hypothesis about limitations of MLP encoder and having CNN encoder might improve the reconstruction quality and latent structure is not validated.
 
-<details>
-<summary>Results (CIFAR-10)</summary>
+**Results (CIFAR-10)**
 
 | Reconstructions | Total Loss | Reconstruction Loss | KL Divergence |
 |:---:|:---:|:---:|:---:|
@@ -170,8 +151,6 @@ Same experiment as experiment 6 (multi-sample Bernoulli decoder) but with CNN en
 | t-SNE of Latent Space | Same-class Interpolation | Cross-class Interpolation | Random Samples |
 |:---:|:---:|:---:|:---:|
 | ![](images/cifar_bernoulli_cnn_tSNE.png) | ![](images/cifar_bernoulli_cnn_same_digit_interpolated.png) | ![](images/cifar_bernoulli_cnn_different_digit_interpolated.png) | ![](images/cifar_bernoulli_cnn_randomly_sampled_z.png) |
-
-</details>
 
 ---
 
@@ -211,5 +190,4 @@ A **CNN-based encoder and decoder** is expected to:
 - Capture spatial correlations in the input 
 - Learn more informative latent representations [didn't happen as per experiment 7] (edited)
 - Improve reconstruction quality and semantic consistency in the latent space [reconstruction quality improved slightly but no improvement in the latent representation clustering] (edited)
-
 
